@@ -181,6 +181,28 @@ fn main() {
 
     let dashboard_manager_state = DashboardManagerState::new();
 
+    // 初始化签到调度器
+    let checkin_scheduler_state = {
+        use duckcoding::services::{provider_manager::ProviderManager, CheckinScheduler};
+        use std::sync::Arc;
+        use tokio::sync::RwLock;
+
+        let provider_manager = Arc::new(RwLock::new(
+            ProviderManager::new().expect("初始化 ProviderManager 失败"),
+        ));
+        let scheduler = CheckinScheduler::new(provider_manager);
+        CheckinSchedulerState::new(scheduler)
+    };
+
+    // 启动签到调度器
+    {
+        let scheduler_clone = checkin_scheduler_state.scheduler.clone();
+        tauri::async_runtime::spawn(async move {
+            let scheduler = scheduler_clone.read().await;
+            scheduler.start().await;
+        });
+    }
+
     // 判断单实例模式
     let single_instance_enabled = determine_single_instance_mode();
 
@@ -197,6 +219,7 @@ fn main() {
         .manage(profile_manager_state)
         .manage(provider_manager_state)
         .manage(dashboard_manager_state)
+        .manage(checkin_scheduler_state)
         .setup(|app| {
             setup_app_hooks(app)?;
             Ok(())
