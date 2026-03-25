@@ -1290,6 +1290,15 @@ impl RequestProcessor for AmpHeadersProcessor {
                                 modified = true;
                             }
 
+                            // 移除 stream_options
+                            if json_body
+                                .as_object_mut()
+                                .and_then(|obj| obj.remove("stream_options"))
+                                .is_some()
+                            {
+                                modified = true;
+                            }
+
                             // 注入 instructions：从 input 数组中提取 role=system 的 content（含空字符串）
                             if let Some(obj) = json_body.as_object() {
                                 if let Some(input) = obj.get("input").and_then(|v| v.as_array()) {
